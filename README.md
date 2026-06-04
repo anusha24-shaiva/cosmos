@@ -284,7 +284,7 @@ See the [Cosmos 3 Diffusers documentation](https://huggingface.co/docs/diffusers
 
 Use vLLM-Omni for Generator production inference behind an OpenAI-compatible API. This integration loads the full Cosmos 3 checkpoint, including the Qwen3-VL-based reasoner path and the diffusion generation path. For understanding-only tasks that return text, use [Reasoner with vLLM](#reasoner-with-vllm) instead, which loads only the reasoner.
 
-> **Compatibility status:** Cosmos 3 Generator support is being upstreamed in [vllm-project/vllm-omni#3454](https://github.com/vllm-project/vllm-omni/pull/3454), which adds text-to-image, text-to-video, and image-to-video; follow-up PRs add video-to-video, video-with-sound, and action. Until they merge, the `vllm/vllm-omni:cosmos3` Docker image is the official build with every modality supported; the PR-branch install below covers only the three merged modes.
+> **Compatibility status:** Cosmos 3 Generator support has landed in [vllm-project/vllm-omni](https://github.com/vllm-project/vllm-omni) `main`: text-to-image, text-to-video, and image-to-video ([#3454](https://github.com/vllm-project/vllm-omni/pull/3454)) and video-with-sound ([#4073](https://github.com/vllm-project/vllm-omni/pull/4073)) are merged; action (policy / forward-dynamics) is in review ([#4102](https://github.com/vllm-project/vllm-omni/pull/4102)) and video-to-video is planned. The `vllm/vllm-omni:cosmos3` Docker image remains the easiest all-in-one build. For current setup and per-modality usage, see the maintained recipes: [Cosmos3-Nano](https://github.com/vllm-project/vllm-omni/blob/main/recipes/cosmos3/Cosmos3-Nano.md) and [Cosmos3-Super](https://github.com/vllm-project/vllm-omni/blob/main/recipes/cosmos3/Cosmos3-Super.md).
 
 Start the server from the Docker image (all modalities). Mount any directory that contains local media or action files you want the server to read.
 
@@ -319,17 +319,17 @@ Additional parallelism options:
 
 When combining parallelism options, ensure the server has enough GPUs for the product of the enabled degrees (`tensor_parallel_size` × `cfg_parallel_size` × `ulysses_degree`).
 
-To install the three merged modes (text-to-image, text-to-video, image-to-video) from the upstreaming PR branch instead of using the Docker image, create a venv and install vLLM-Omni from the PR ref, choosing the CUDA build that matches your driver:
+To install vLLM-Omni from `main` instead of using the Docker image (text-to-image, text-to-video, image-to-video, and video-with-sound are merged there; see the [Cosmos3-Nano](https://github.com/vllm-project/vllm-omni/blob/main/recipes/cosmos3/Cosmos3-Nano.md) and [Cosmos3-Super](https://github.com/vllm-project/vllm-omni/blob/main/recipes/cosmos3/Cosmos3-Super.md) recipes for per-modality usage), create a venv and install, choosing the CUDA build that matches your driver:
 
 ```shell
 uv venv --python 3.13 --seed --managed-python
 source .venv/bin/activate
 # CUDA 13 driver:
 uv pip install --torch-backend=cu130 \
-  "vllm-omni @ git+https://github.com/vllm-project/vllm-omni.git@refs/pull/3454/head"
+  "vllm-omni @ git+https://github.com/vllm-project/vllm-omni.git@main"
 # CUDA 12.8 driver:
 # uv pip install --torch-backend=cu128 \
-#   "vllm-omni @ git+https://github.com/vllm-project/vllm-omni.git@refs/pull/3454/head"
+#   "vllm-omni @ git+https://github.com/vllm-project/vllm-omni.git@main"
 ```
 
 Then run `vllm serve nvidia/Cosmos3-Nano --omni --model-class-name Cosmos3OmniDiffusersPipeline --allowed-local-media-path / --port 8000 --init-timeout 1800` directly, without the `docker run ... vllm/vllm-omni:cosmos3` wrapper.
@@ -352,7 +352,7 @@ Action modes use Cosmos 3 as a world model: they condition on an embodiment (`do
 | Inverse dynamics | `inverse_dynamics` | Video + instruction | Video + predicted action chunk |
 | Forward dynamics | `forward_dynamics` | Image + action chunk | Video |
 
-Pass embodiment settings through `extra_params`: `action_mode`, `domain_name` (for example `bridge_orig_lerobot`, `av`, or `camera_pose`), `raw_action_dim`, and `action_chunk_size`. Forward dynamics also takes an `action_path` pointing at an action file the server can read, so start the server with `--allowed-local-media-path` covering that file (for Docker, mount the file and pass the container-visible path). For the full set of robot, autonomous-vehicle, and camera-pose variants, see the [Cosmos 3 online-serving examples](https://github.com/vllm-project/vllm-omni/tree/main/examples/online_serving/cosmos3).
+Pass embodiment settings through `extra_params`: `action_mode`, `domain_name` (for example `bridge_orig_lerobot`, `av`, or `camera_pose`), `raw_action_dim`, and `action_chunk_size`. Forward dynamics also takes an `action_path` pointing at an action file the server can read, so start the server with `--allowed-local-media-path` covering that file (for Docker, mount the file and pass the container-visible path). For the full set of robot, autonomous-vehicle, and camera-pose variants, see the [Cosmos 3 vLLM-Omni recipes](https://github.com/vllm-project/vllm-omni/tree/main/recipes/cosmos3).
 
 Example video request:
 
@@ -425,10 +425,9 @@ vllm serve nvidia/Cosmos3-Nano --omni \
 
 References:
 
-- [Cosmos 3 online-serving examples](https://github.com/vllm-project/vllm-omni/tree/main/examples/online_serving/cosmos3)
+- [Cosmos 3 vLLM-Omni recipes](https://github.com/vllm-project/vllm-omni/tree/main/recipes/cosmos3)
 - [vLLM-Omni Videos API](https://docs.vllm.ai/projects/vllm-omni/en/latest/serving/videos_api/)
 - [vLLM-Omni Image Generation API](https://docs.vllm.ai/projects/vllm-omni/en/latest/serving/image_generation_api/)
-- [Cosmos 3 vLLM-Omni upstreaming PR](https://github.com/vllm-project/vllm-omni/pull/3454)
 
 </details>
 
